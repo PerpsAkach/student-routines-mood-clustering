@@ -8,7 +8,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from .config import DEFAULT_CONFIG, PipelineConfig, WEEKDAY_BLOCKS
+from .config import DEFAULT_CONFIG, WEEKDAY_BLOCKS, PipelineConfig
 
 EVENT_COLUMNS = [
     "Person_ID",
