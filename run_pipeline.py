@@ -12,7 +12,10 @@ from src.clustering import cluster_diagnostics, run_hdbscan
 from src.config import DEFAULT_CONFIG, PipelineConfig
 from src.features import build_daily_features, clustering_feature_columns
 from src.quality import event_quality_summary
-from src.semantic import aggregate_student_period_text, weekday_weekend_semantic_distance
+from src.semantic import (
+    aggregate_student_period_text,
+    weekday_weekend_semantic_distance,
+)
 from src.visualization import plot_tsne, tsne_projection
 from src.workbook_parser import load_workbook
 
@@ -52,8 +55,8 @@ def _cluster_daily(daily: pd.DataFrame, cfg: PipelineConfig):
     if len(daily) < cfg.hdbscan_min_cluster_size:
         return daily.assign(Cluster=pd.NA, Cluster_Probability=pd.NA), {
             "status": "skipped_insufficient_observations",
-            "observations": int(len(daily)),
-            "required": int(cfg.hdbscan_min_cluster_size),
+            "observations": len(daily),
+            "required": cfg.hdbscan_min_cluster_size,
         }
 
     clustering_input = daily[columns]
@@ -120,7 +123,7 @@ def run_pipeline(
         distances.to_csv(output_dir / "weekday_weekend_semantic_distance.csv", index=False)
         semantic_summary = {
             "status": "completed",
-            "participants_with_both_periods": int(len(distances)),
+            "participants_with_both_periods": len(distances),
         }
 
     tsne_summary: dict[str, object] = {"status": "not_requested"}
@@ -136,7 +139,7 @@ def run_pipeline(
             projection.insert(0, "Person_ID", daily["Person_ID"].to_numpy())
             projection.to_csv(output_dir / "tsne_projection.csv", index=False)
 
-            labels = clustered["Cluster"] if "Cluster" in clustered else None
+            labels = clustered.get("Cluster")
             fig, _ = plot_tsne(
                 projection[["TSNE_1", "TSNE_2"]], labels=labels
             )
@@ -144,12 +147,12 @@ def run_pipeline(
             import matplotlib.pyplot as plt
 
             plt.close(fig)
-            tsne_summary = {"status": "completed", "observations": int(len(daily))}
+            tsne_summary = {"status": "completed", "observations": len(daily)}
 
     manifest = {
-        "events": int(len(events)),
+        "events": len(events),
         "participants": int(events["Person_ID"].nunique()),
-        "participant_days": int(len(daily)),
+        "participant_days": len(daily),
         "quality": quality,
         "clustering": clustering_summary,
         "semantic": semantic_summary,
