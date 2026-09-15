@@ -83,8 +83,8 @@ def cluster_diagnostics(clustered: pd.DataFrame) -> dict[str, float | int]:
     substantive = {int(label) for label in labels.dropna().unique() if label >= 0}
 
     return {
-        "observations": int(len(clustered)),
-        "clusters": int(len(substantive)),
+        "observations": len(clustered),
+        "clusters": len(substantive),
         "noise_observations": int(noise.sum()),
         "noise_fraction": float(noise.mean()),
         "mean_assignment_probability": float(probabilities.mean()),
