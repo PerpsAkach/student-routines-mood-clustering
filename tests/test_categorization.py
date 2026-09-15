@@ -12,3 +12,7 @@ def test_homework_is_academic():
 
 def test_gym_is_exercise():
     assert categorize_activity("go to gym") == "Exercise"
+
+
+def test_unknown_activity_is_other():
+    assert categorize_activity("commute to campus") == "Other"
