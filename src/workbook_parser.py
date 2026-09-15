@@ -95,10 +95,11 @@ def parse_sheet(
         block["Where"] = pd.NA
 
         # Workbook cells were historically visually merged/continued. Forward fill
-        # only contextual columns; never forward-fill timestamps. infer_objects
-        # makes the dtype transition explicit for pandas 2.x/3.x compatibility.
-        for col in ["Activity", "Who", "Satisfaction"]:
-            block[col] = block[col].ffill().infer_objects(copy=False)
+        # only contextual columns; never forward-fill timestamps. Opt in to pandas'
+        # future no-silent-downcasting behavior so dtype handling is explicit.
+        with pd.option_context("future.no_silent_downcasting", True):
+            for col in ["Activity", "Who", "Satisfaction"]:
+                block[col] = block[col].ffill().infer_objects(copy=False)
 
         block["Time"] = block["Time"].map(_parse_time_value)
         block["Activity"] = block["Activity"].map(
