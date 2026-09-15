@@ -2,6 +2,8 @@ import pandas as pd
 import pytest
 
 from src.analysis import correlation_summary, mood_by_category, mood_feature_correlations
+from src.quality import event_quality_summary
+from src.routine_similarity import routine_similarity, routines_match
 
 
 def test_mood_by_category_aggregates_descriptive_statistics():
@@ -50,3 +52,28 @@ def test_mood_feature_correlations_only_uses_behavioral_features():
     )
     result = mood_feature_correlations(daily)
     assert set(result["x"]) == {"Minutes_Sleep", "Event_Count"}
+
+
+def test_quality_summary_counts_common_input_issues():
+    events = pd.DataFrame(
+        {
+            "Person_ID": ["A_1", "A_1"],
+            "Day": ["Monday", "Monday"],
+            "Start_Time": pd.to_datetime(["2000-01-01 08:00", "2000-01-01 08:00"]),
+            "Duration_Minutes": [0.0, 30.0],
+            "Activity": ["study", "class"],
+            "Satisfaction": [4, None],
+        }
+    )
+    result = event_quality_summary(events)
+    assert result["events"] == 2
+    assert result["duplicate_timestamp_rows"] == 2
+    assert result["zero_duration_rows"] == 1
+    assert result["missing_satisfaction_rows"] == 1
+
+
+def test_routine_similarity_is_normalized_and_thresholded():
+    assert routine_similarity("Study   Class", "study class") == pytest.approx(1.0)
+    assert routines_match("study class", "study class", threshold=0.85)
+    with pytest.raises(ValueError, match="threshold"):
+        routines_match("a", "b", threshold=1.1)
