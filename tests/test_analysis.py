@@ -1,7 +1,11 @@
 import pandas as pd
 import pytest
 
-from src.analysis import correlation_summary, mood_by_category, mood_feature_correlations
+from src.analysis import (
+    correlation_summary,
+    mood_by_category,
+    mood_feature_correlations,
+)
 from src.quality import event_quality_summary
 from src.routine_similarity import routine_similarity, routines_match
 
@@ -67,7 +71,7 @@ def test_quality_summary_counts_common_input_issues():
     )
     result = event_quality_summary(events)
     assert result["events"] == 2
-    assert result["duplicate_timestamp_rows"] == 2
+    assert result["repeated_timestamp_rows"] == 2
     assert result["zero_duration_rows"] == 1
     assert result["missing_satisfaction_rows"] == 1
 
