@@ -1,8 +1,15 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from src.features import build_daily_features, clustering_feature_columns
-from src.semantic import aggregate_student_period_text, embed_activities, fit_tfidf
+from src.semantic import (
+    aggregate_student_period_text,
+    embed_activities,
+    fit_tfidf,
+    weekday_weekend_semantic_distance,
+)
+from src.visualization import tsne_projection
 
 
 class EncoderDouble:
@@ -10,7 +17,10 @@ class EncoderDouble:
         assert batch_size == 2
         assert show_progress_bar is False
         assert normalize_embeddings is True
-        return np.asarray([[1.0, 0.0] for _ in texts])
+        vectors = []
+        for text in texts:
+            vectors.append([1.0, 0.0] if "study" in text else [0.0, 1.0])
+        return np.asarray(vectors)
 
 
 def test_build_daily_features_keeps_mood_outside_behavioral_columns():
@@ -51,7 +61,7 @@ def test_tfidf_and_injected_encoder_are_offline_testable():
     assert embeddings.shape == (2, 2)
 
 
-def test_student_period_text_separates_weekdays_and_weekends():
+def test_student_period_text_and_semantic_distance():
     events = pd.DataFrame(
         {
             "Person_ID": ["A_1", "A_1"],
@@ -59,5 +69,37 @@ def test_student_period_text_separates_weekdays_and_weekends():
             "Activity": ["study", "exercise"],
         }
     )
-    result = aggregate_student_period_text(events)
-    assert set(result["Period"]) == {"Weekday", "Weekend"}
+    period = aggregate_student_period_text(events)
+    assert set(period["Period"]) == {"Weekday", "Weekend"}
+
+    distances = weekday_weekend_semantic_distance(
+        period,
+        batch_size=2,
+        model=EncoderDouble(),
+    )
+    assert distances.loc[0, "Person_ID"] == "A_1"
+    assert distances.loc[0, "Semantic_Distance"] == pytest.approx(1.0)
+
+
+def test_semantic_distance_returns_empty_without_both_periods():
+    period = pd.DataFrame(
+        {
+            "Person_ID": ["A_1"],
+            "Period": ["Weekday"],
+            "Activity_Text": ["study"],
+        }
+    )
+    assert weekday_weekend_semantic_distance(period, model=EncoderDouble()).empty
+
+
+def test_tsne_projection_is_deterministic_for_fixed_seed():
+    frame = pd.DataFrame(
+        {
+            "sleep": [1.0, 2.0, 3.0, 4.0, 5.0],
+            "study": [5.0, 4.0, 3.0, 2.0, 1.0],
+        }
+    )
+    first = tsne_projection(frame, random_state=42, perplexity=2)
+    second = tsne_projection(frame, random_state=42, perplexity=2)
+    assert first.shape == (5, 2)
+    np.testing.assert_allclose(first.to_numpy(), second.to_numpy())
