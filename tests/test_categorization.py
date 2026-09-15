@@ -36,6 +36,26 @@ def test_clustering_requires_varying_numeric_features():
         )
 
 
+def test_hdbscan_wrapper_returns_labels_and_membership_strengths():
+    frame = pd.DataFrame(
+        {
+            "sleep": [8.0, 8.1, 7.9, 8.2, 4.0, 4.1, 3.9, 4.2],
+            "study": [2.0, 2.1, 1.9, 2.2, 8.0, 8.1, 7.9, 8.2],
+        }
+    )
+    clustered, clusterer, scaler = run_hdbscan(
+        frame,
+        min_cluster_size=2,
+        min_samples=1,
+    )
+
+    assert len(clustered) == len(frame)
+    assert {"Cluster", "Cluster_Probability"}.issubset(clustered.columns)
+    assert clustered["Cluster_Probability"].between(0, 1).all()
+    assert hasattr(clusterer, "labels_")
+    assert hasattr(scaler, "mean_")
+
+
 def test_cluster_diagnostics_counts_assignments():
     frame = pd.DataFrame(
         {"Cluster": [0, 0, 1, -1], "Cluster_Probability": [0.9, 0.8, 0.7, 0.0]}
