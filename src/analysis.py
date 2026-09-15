@@ -59,7 +59,7 @@ def correlation_summary(
     result: dict[str, float | int | str | None] = {
         "x": x_col,
         "y": y_col,
-        "n": int(len(pairs)),
+        "n": len(pairs),
         "pearson_r": None,
         "pearson_p": None,
         "spearman_rho": None,
