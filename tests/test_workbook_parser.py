@@ -3,6 +3,7 @@ from datetime import time
 import pandas as pd
 import pytest
 
+from run_pipeline import run_pipeline
 from src.config import PipelineConfig
 from src.workbook_parser import _parse_time_value, parse_sheet
 
@@ -41,3 +42,38 @@ def test_parse_sheet_rejects_invalid_inputs():
         parse_sheet([], "A_1", PipelineConfig())
     with pytest.raises(ValueError, match="sheet_name"):
         parse_sheet(pd.DataFrame(), "", PipelineConfig())
+
+
+def test_pipeline_writes_core_outputs_and_records_small_sample_skip(tmp_path):
+    raw = pd.DataFrame([[None] * 30 for _ in range(2)])
+    raw.iloc[0, 2:6] = [0.25, "Breakfast", "Alone", 4]
+    raw.iloc[1, 2:6] = [0.5, "Study", "Classmates", 5]
+
+    workbook = tmp_path / "diary.xlsx"
+    with pd.ExcelWriter(workbook, engine="openpyxl") as writer:
+        raw.to_excel(writer, sheet_name="A_1", index=False, header=False)
+        raw.to_excel(writer, sheet_name="Notes", index=False, header=False)
+
+    output_dir = tmp_path / "outputs"
+    manifest = run_pipeline(
+        workbook,
+        output_dir,
+        cfg=PipelineConfig(skip_rows=0, hdbscan_min_cluster_size=15),
+    )
+
+    assert manifest["events"] == 2
+    assert manifest["participants"] == 1
+    assert manifest["participant_days"] == 1
+    assert manifest["clustering"]["status"] == "skipped_insufficient_observations"
+
+    expected = {
+        "events_clean.csv",
+        "daily_features.csv",
+        "daily_clusters.csv",
+        "mood_by_category.csv",
+        "mood_feature_correlations.csv",
+        "data_quality.json",
+        "clustering_diagnostics.json",
+        "run_manifest.json",
+    }
+    assert expected.issubset({path.name for path in output_dir.iterdir()})
