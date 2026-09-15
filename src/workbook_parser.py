@@ -95,9 +95,10 @@ def parse_sheet(
         block["Where"] = pd.NA
 
         # Workbook cells were historically visually merged/continued. Forward fill
-        # only contextual columns; never forward-fill timestamps.
+        # only contextual columns; never forward-fill timestamps. infer_objects
+        # makes the dtype transition explicit for pandas 2.x/3.x compatibility.
         for col in ["Activity", "Who", "Satisfaction"]:
-            block[col] = block[col].ffill()
+            block[col] = block[col].ffill().infer_objects(copy=False)
 
         block["Time"] = block["Time"].map(_parse_time_value)
         block["Activity"] = block["Activity"].map(
@@ -144,8 +145,6 @@ def parse_sheet(
         (df["End_Time"] - df["Start_Time"]).dt.total_seconds() / 60
     )
 
-    # Duplicate timestamps can legitimately occur in messy diaries, but negative
-    # reconstructed durations indicate corrupt ordering and should never propagate.
     if (df["Duration_Minutes"] < 0).any():
         raise ValueError("Negative event durations were reconstructed")
 
